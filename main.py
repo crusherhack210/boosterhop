@@ -10,7 +10,9 @@ bno.enable_feature(BNO_REPORT_LINEAR_ACCELERATION)
 vx = vy = vz = 0.0
 still_count = 0
 last = time.monotonic()
-
+posx = 0
+posy = 0
+posz = 0
 while True:
     ax, ay, az = bno.linear_acceleration
     now = time.monotonic()
@@ -31,7 +33,7 @@ while True:
 
     if still_count > 10:           # stationary for a while: reset velocity
         vx = vy = vz = 0.0
-
-    speed = math.sqrt(vx*vx + vy*vy + vz*vz)
-    print(f"v = ({vx:5.2f}, {vy:5.2f}, {vz:5.2f})  speed = {speed:5.2f} m/s")
+    posx += vx
+    posy += vy
+    posz += vz
     time.sleep(0.02)
