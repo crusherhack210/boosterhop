@@ -33,8 +33,8 @@ while True:
 
     if still_count > 10:           # stationary for a while: reset velocity
         vx = vy = vz = 0.0
-    posx += vx
-    posy += vy
-    posz += vz
+    posx += vx *dt
+    posy += vy *dt
+    posz += vz *dt
     print(str(posx) + " " + str(posy) + " " + str(posz))
     time.sleep(0.02)
