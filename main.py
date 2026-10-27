@@ -32,6 +32,7 @@ while True:
         a = bno.linear_acceleration
         q = bno.quaternion
     except (KeyError, RuntimeError, OSError):
+        time.sleep(0.01)
         continue
 
     now = time.monotonic()
