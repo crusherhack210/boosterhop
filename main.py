@@ -36,4 +36,5 @@ while True:
     posx += vx
     posy += vy
     posz += vz
+    print(posx + " " + posy + " " + posz)
     time.sleep(0.02)
