@@ -5,8 +5,19 @@ from adafruit_bno08x.i2c import BNO08X_I2C
 
 i2c = busio.I2C(board.SCL, board.SDA)
 bno = BNO08X_I2C(i2c)
-bno.enable_feature(BNO_REPORT_LINEAR_ACCELERATION, 10000)  # 100 Hz
-bno.enable_feature(BNO_REPORT_ROTATION_VECTOR, 10000)
+time.sleep(0.5)
+
+for attempt in range(5):
+    try:
+        bno.enable_feature(BNO_REPORT_LINEAR_ACCELERATION, 20000)
+        bno.enable_feature(BNO_REPORT_ROTATION_VECTOR, 20000)
+        break
+    except RuntimeError:
+        print("enable failed, retrying...")
+        bno.soft_reset()
+        time.sleep(1)
+else:
+    raise SystemExit("Sensor not responding, power cycle the Pi")
 
 def cross(a, b):
     return (a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0])
@@ -26,33 +37,43 @@ vel = [0.0, 0.0, 0.0]
 pos = [0.0, 0.0, 0.0]
 still_count = 0
 last = time.monotonic()
+try:
+    while True:
+        try:
+            a = bno.linear_acceleration
+            q = bno.quaternion
+        except (KeyError, RuntimeError, OSError):
+            time.sleep(0.01)
+            continue
 
-while True:
-    try:
-        a = bno.linear_acceleration
-        q = bno.quaternion
-    except (KeyError, RuntimeError, OSError):
+        now = time.monotonic()
+        dt = now - last
+        last = now
+
+        aw = rotate(q, a)  # acceleration in world frame
+
+        if math.sqrt(aw[0]**2 + aw[1]**2 + aw[2]**2) < 0.15:
+            aw = (0.0, 0.0, 0.0)
+            still_count += 1
+        else:
+            still_count = 0
+
+        for i in range(3):
+            vel[i] += aw[i] * dt
+            pos[i] += vel[i] * dt
+
+        if still_count > 10:
+            vel = [0.0, 0.0, 0.0]
+
+        print(f"pos = ({pos[0]:6.2f}, {pos[1]:6.2f}, {pos[2]:6.2f}) m")
         time.sleep(0.01)
-        continue
 
-    now = time.monotonic()
-    dt = now - last
-    last = now
+except KeyboardInterrupt:
+    print("stopping")
 
-    aw = rotate(q, a)  # acceleration in world frame
-
-    if math.sqrt(aw[0]**2 + aw[1]**2 + aw[2]**2) < 0.15:
-        aw = (0.0, 0.0, 0.0)
-        still_count += 1
-    else:
-        still_count = 0
-
-    for i in range(3):
-        vel[i] += aw[i] * dt
-        pos[i] += vel[i] * dt
-
-    if still_count > 10:
-        vel = [0.0, 0.0, 0.0]
-
-    print(f"pos = ({pos[0]:6.2f}, {pos[1]:6.2f}, {pos[2]:6.2f}) m")
-    time.sleep(0.01)
+finally:
+    try:
+        bno.soft_reset()
+    except Exception:
+        pass
+    i2c.deinit()
