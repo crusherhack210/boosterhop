@@ -1,4 +1,4 @@
-import time
+import time, math
 import board, busio
 from adafruit_bno08x import BNO_REPORT_LINEAR_ACCELERATION
 from adafruit_bno08x.i2c import BNO08X_I2C
@@ -7,7 +7,31 @@ i2c = busio.I2C(board.SCL, board.SDA)
 bno = BNO08X_I2C(i2c)
 bno.enable_feature(BNO_REPORT_LINEAR_ACCELERATION)
 
+vx = vy = vz = 0.0
+still_count = 0
+last = time.monotonic()
+
 while True:
-    x, y, z = bno.linear_acceleration
-    print(f"{x:6.2f} {y:6.2f} {z:6.2f}")
-    time.sleep(0.05)
+    ax, ay, az = bno.linear_acceleration
+    now = time.monotonic()
+    dt = now - last
+    last = now
+
+    mag = math.sqrt(ax*ax + ay*ay + az*az)
+
+    if mag < 0.15:                 # deadband: treat tiny readings as noise
+        ax = ay = az = 0.0
+        still_count += 1
+    else:
+        still_count = 0
+
+    vx += ax * dt
+    vy += ay * dt
+    vz += az * dt
+
+    if still_count > 10:           # stationary for a while: reset velocity
+        vx = vy = vz = 0.0
+
+    speed = math.sqrt(vx*vx + vy*vy + vz*vz)
+    print(f"v = ({vx:5.2f}, {vy:5.2f}, {vz:5.2f})  speed = {speed:5.2f} m/s")
+    time.sleep(0.02)
