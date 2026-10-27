@@ -7,5 +7,5 @@ i2c = busio.I2C(board.SCL, board.SDA, frequency=400000)
 bno = BNO08X_I2C(i2c)
 bno.enable_feature(BNO_REPORT_ACCELEROMETER)
 while True:
-  print(bno.acceleration)
+  print(bno.linear_acceleration)
   time.sleep(0.1)
